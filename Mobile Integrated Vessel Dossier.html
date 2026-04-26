@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHIPQUEST — Vessel Dossier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bruno+Ace+SC&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #07090f;
+    --bg-panel:  #0d1120;
+    --bg-field:  #0a0e1a;
+    --border:    #1e2a44;
+    --border-hi: #2e4a7a;
+    --accent:    #f0a84a;
+    --accent-dim:#7a4e1a;
+    --text:      #c8d8f0;
+    --text-dim:  #5a7099;
+    --text-hi:   #e8f4ff;
+    --pip-on:    #f0a84a;
+    --pip-off:   #0a0e1a;
+    --grid-line: rgba(240, 168, 74, 0.03);
+    --font-head: 'Bruno Ace SC', sans-serif;
+    --font-mono: 'Share Tech Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    padding: 2rem 1.5rem;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .sheet {
+    max-width: 720px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .sheet::before, .sheet::after {
+    content: '';
+    position: absolute;
+    width: 28px; height: 28px;
+    border-color: var(--accent);
+    border-style: solid;
+    opacity: 0.4;
+  }
+  .sheet::before { top: -6px; left: -6px; border-width: 2px 0 0 2px; }
+  .sheet::after  { top: -6px; right: -6px; border-width: 2px 2px 0 0; }
+
+  /* ── HEADER ── */
+  .sheet-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding-bottom: 1rem;
+    margin-bottom: 1.2rem;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .sheet-header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0;
+    width: 60px; height: 1px;
+    background: var(--accent);
+  }
+
+  .game-super {
+    font-family: var(--font-head);
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .game-title {
+    font-family: var(--font-head);
+    font-size: 28px;
+    color: var(--text-hi);
+    letter-spacing: 0.08em;
+    line-height: 1;
+  }
+  .game-title span { color: var(--accent); }
+
+  .dossier-meta {
+    text-align: right;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    line-height: 1.8;
+  }
+  .dossier-meta .ver {
+    color: var(--accent);
+    font-size: 11px;
+  }
+
+  /* ── SECTION ── */
+  .section {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .section-label {
+    font-family: var(--font-head);
+    font-size: 9px;
+    letter-spacing: 0.28em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── FIELDS ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .field { margin-bottom: 10px; }
+  .field:last-child { margin-bottom: 0; }
+
+  .field-label {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .field-hint {
+    font-size: 9px;
+    color: var(--accent-dim);
+    letter-spacing: 0.08em;
+    margin-top: 4px;
+  }
+
+  .field-input {
+    width: 100%;
+    background: var(--bg-field);
+    border: 1px solid var(--border);
+    border-radius: 1px;
+    padding: 7px 10px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-hi);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: none;
+  }
+  .field-input::placeholder { color: var(--text-dim); opacity: 0.6; }
+  .field-input:focus {
+    outline: none;
+    border-color: var(--accent-dim);
+    box-shadow: 0 0 0 1px rgba(240,168,74,0.08), inset 0 0 12px rgba(240,168,74,0.03);
+  }
+  textarea.field-input { resize: none; line-height: 1.6; }
+
+  /* ── CLASS SELECTOR ── */
+  .class-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+  }
+  .class-btn {
+    background: var(--bg-field);
+    border: 1px solid var(--border);
+    border-radius: 1px;
+    padding: 8px 4px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+    user-select: none;
+  }
+  .class-btn:hover {
+    border-color: var(--accent-dim);
+  }
+  .class-btn.selected {
+    background: rgba(240,168,74,0.08);
+    border-color: var(--accent);
+  }
+  .class-letter {
+    font-family: var(--font-head);
+    font-size: 16px;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .class-btn.selected .class-letter { color: var(--accent); }
+  .class-name {
+    font-size: 8px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    line-height: 1.2;
+  }
+  .class-btn.selected .class-name { color: var(--accent-dim); }
+  .class-tag {
+    font-size: 8px;
+    color: var(--text-dim);
+    font-style: italic;
+    margin-top: 2px;
+    line-height: 1.2;
+  }
+  .class-btn.selected .class-tag { color: var(--accent-dim); }
+
+  /* ── SUBSYSTEMS ── */
+  .subsystem-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .subsystem-row {
+    display: grid;
+    grid-template-columns: 110px 1fr 80px;
+    align-items: center;
+    gap: 12px;
+  }
+  .subsystem-name {
+    font-family: var(--font-head);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--text);
+  }
+  .pip-track {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+  .pip {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--border-hi);
+    background: var(--pip-off);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    transition: background 0.1s, border-color 0.1s, color 0.1s;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .pip.filled {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .pip-zero {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+
+  /* ── HULL SIZE ── */
+  .hull-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+  }
+  .hull-btn {
+    background: var(--bg-field);
+    border: 1px solid var(--border);
+    border-radius: 1px;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+    user-select: none;
+  }
+  .hull-btn:hover { border-color: var(--accent-dim); }
+  .hull-btn.selected {
+    background: rgba(240,168,74,0.08);
+    border-color: var(--accent);
+  }
+  .hull-name {
+    font-family: var(--font-head);
+    font-size: 10px;
+    color: var(--text);
+    margin-bottom: 3px;
+    letter-spacing: 0.06em;
+  }
+  .hull-btn.selected .hull-name { color: var(--accent); }
+  .hull-cap {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+  }
+  .hull-btn.selected .hull-cap { color: var(--accent-dim); }
+
+  /* ── FOOTER ── */
+  .sheet-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+  }
+  .sheet-footer .accent { color: var(--accent); }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <!-- HEADER -->
+  <div class="sheet-header">
+    <div class="title-block">
+      <div class="game-super">Deep-Space Vessel Record</div>
+      <div class="game-title">SHIP<span>QUEST</span></div>
+    </div>
+    <div class="dossier-meta">
+      <div class="ver">VESSEL DOSSIER v5.0</div>
+      <div>TTRPG // SHIP SHEET</div>
+      <div>CLASSIFICATION: OPEN</div>
+    </div>
+  </div>
+
+  <!-- VESSEL IDENTITY -->
+  <div class="section">
+    <div class="section-label">Vessel Identity</div>
+    <div class="field">
+      <div class="field-label">Ship Name / Designation</div>
+      <input class="field-input" type="text" placeholder="vessel name or registry ID">
+    </div>
+  </div>
+
+  <!-- CLASS -->
+  <div class="section">
+    <div class="section-label">Ship Class</div>
+    <div class="class-grid" id="class-grid">
+      <div class="class-btn" onclick="selectClass(this)">
+        <div class="class-letter">F</div>
+        <div class="class-name">Fighter</div>
+        <div class="class-tag">Ace Skirmisher</div>
+      </div>
+      <div class="class-btn" onclick="selectClass(this)">
+        <div class="class-letter">A</div>
+        <div class="class-name">Alpha</div>
+        <div class="class-tag">Executioner</div>
+      </div>
+      <div class="class-btn" onclick="selectClass(this)">
+        <div class="class-letter">C</div>
+        <div class="class-name">Commercial</div>
+        <div class="class-tag">Frontier Industrialist</div>
+      </div>
+      <div class="class-btn" onclick="selectClass(this)">
+        <div class="class-letter">T</div>
+        <div class="class-name">Tempest</div>
+        <div class="class-tag">Stormrunner</div>
+      </div>
+      <div class="class-btn" onclick="selectClass(this)">
+        <div class="class-letter">S</div>
+        <div class="class-name">Support</div>
+        <div class="class-tag">Self-Sustaining Operator</div>
+      </div>
+      <div class="class-btn" onclick="selectClass(this)">
+        <div class="class-letter">,</div>
+        <div class="class-name">Comma</div>
+        <div class="class-tag">Wildcard Captain</div>
+      </div>
+      <div class="class-btn" onclick="selectClass(this)">
+        <div class="class-letter">G</div>
+        <div class="class-name">Guardian</div>
+        <div class="class-tag">Bulwark</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HULL SIZE -->
+  <div class="section">
+    <div class="section-label">Hull Size</div>
+    <div class="hull-grid" id="hull-grid">
+      <div class="hull-btn" onclick="selectHull(this)" data-hull="Shuttle-Craft">
+        <div class="hull-name">Shuttle-Craft</div>
+        <div class="hull-cap">Cargo: Minimal · Crew: Minimal</div>
+      </div>
+      <div class="hull-btn" onclick="selectHull(this)" data-hull="Frigate">
+        <div class="hull-name">Frigate</div>
+        <div class="hull-cap">Cargo: Small · Crew: Small</div>
+      </div>
+      <div class="hull-btn" onclick="selectHull(this)" data-hull="Destroyer">
+        <div class="hull-name">Destroyer</div>
+        <div class="hull-cap">Cargo: Med-Small · Crew: Sm-Med</div>
+      </div>
+      <div class="hull-btn" onclick="selectHull(this)" data-hull="Cruiser">
+        <div class="hull-name">Cruiser</div>
+        <div class="hull-cap">Cargo: Medium · Crew: Medium</div>
+      </div>
+      <div class="hull-btn" onclick="selectHull(this)" data-hull="Battle-Cruiser">
+        <div class="hull-name">Battle-Cruiser</div>
+        <div class="hull-cap">Cargo: Large · Crew: Med-Large</div>
+      </div>
+      <div class="hull-btn" onclick="selectHull(this)" data-hull="Dreadnought">
+        <div class="hull-name">Dreadnought</div>
+        <div class="hull-cap">Cargo: Vast · Crew: Large</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CAPACITY -->
+  <div class="section">
+    <div class="section-label">Capacity</div>
+    <div class="grid-2">
+      <div class="field">
+        <div class="field-label">Cargo Hold</div>
+        <input class="field-input" type="text" id="cargo-hold" placeholder="units / capacity">
+        <div class="field-hint" id="cargo-hint">— select hull &amp; class —</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Crew Quarters</div>
+        <input class="field-input" type="text" id="crew-quarters" placeholder="berths / size">
+        <div class="field-hint" id="crew-hint">— select hull &amp; class —</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBSYSTEMS -->
+  <div class="section">
+    <div class="section-label">Subsystems — Power Level (0–5)</div>
+    <div class="subsystem-grid" id="subsystem-grid">
+      <!-- built by JS -->
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  <div class="section">
+    <div class="section-label">Ship Log · Notes</div>
+    <textarea class="field-input" rows="4" placeholder="active mods · damage · crew manifest · mission notes..."></textarea>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="sheet-footer">
+    <span>SHUTTLE-CRAFT · FRIGATE · DESTROYER · CRUISER · BATTLE-CRUISER · DREADNOUGHT</span>
+    <span class="accent">SHIPQUEST TTRPG // v5.0</span>
+  </div>
+
+</div>
+
+<script>
+// Hull size base capacity
+const hullRef = {
+  'Shuttle-Craft':  { cargo: 'Minimal',    crew: 'Minimal'    },
+  'Frigate':        { cargo: 'Small',       crew: 'Small'      },
+  'Destroyer':      { cargo: 'Med-Small',   crew: 'Small-Med'  },
+  'Cruiser':        { cargo: 'Medium',      crew: 'Medium'     },
+  'Battle-Cruiser': { cargo: 'Large',       crew: 'Med-Large'  },
+  'Dreadnought':    { cargo: 'Vast',        crew: 'Large'      },
+};
+
+// Class cargo/crew modifiers
+const classModRef = {
+  'F': { cargo: '(reduced — F)',    crew: '(reduced — F)'    },
+  'A': { cargo: '(reduced — A)',    crew: '(reduced — A)'    },
+  'C': { cargo: '(maximized — C)',  crew: '(neutral — C)'    },
+  'T': { cargo: '(neutral — T)',    crew: '(neutral — T)'    },
+  'S': { cargo: '(neutral — S)',    crew: '(expanded — S)'   },
+  ',': { cargo: '(variable — ,)',   crew: '(variable — ,)'   },
+  'G': { cargo: '(neutral — G)',    crew: '(expanded — G)'   },
+};
+
+let selectedHull  = null;
+let selectedClass = null;
+
+function updateCapacityHints() {
+  const ch = document.getElementById('cargo-hint');
+  const cr = document.getElementById('crew-hint');
+  if (!selectedHull && !selectedClass) {
+    ch.textContent = '— select hull & class —';
+    cr.textContent = '— select hull & class —';
+    return;
+  }
+  const hullCargo = selectedHull ? hullRef[selectedHull].cargo : '—';
+  const hullCrew  = selectedHull ? hullRef[selectedHull].crew  : '—';
+  const modCargo  = selectedClass ? classModRef[selectedClass].cargo : '';
+  const modCrew   = selectedClass ? classModRef[selectedClass].crew  : '';
+  ch.textContent = 'ref: ' + hullCargo + (modCargo ? ' ' + modCargo : '');
+  cr.textContent = 'ref: ' + hullCrew  + (modCrew  ? ' ' + modCrew  : '');
+}
+
+function selectHull(btn) {
+  document.querySelectorAll('.hull-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedHull = btn.dataset.hull;
+  updateCapacityHints();
+}
+
+function selectClass(btn) {
+  document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedClass = btn.querySelector('.class-letter').textContent.trim();
+  updateCapacityHints();
+}
+
+// Build subsystem pip rows
+const subsystems = ['E-Reactor','Propulsion','Comms','Z-Generator','Repair','Weapons','Shielding'];
+const grid = document.getElementById('subsystem-grid');
+
+subsystems.forEach(name => {
+  const row = document.createElement('div');
+  row.className = 'subsystem-row';
+
+  const label = document.createElement('div');
+  label.className = 'subsystem-name';
+  label.textContent = name;
+
+  const track = document.createElement('div');
+  track.className = 'pip-track';
+
+  for (let i = 1; i <= 5; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'pip';
+    pip.textContent = i;
+    pip.dataset.level = i;
+    pip.onclick = () => {
+      const filled = track.querySelectorAll('.pip.filled').length;
+      const level = parseInt(pip.dataset.level);
+      if (filled === level) {
+        track.querySelectorAll('.pip').forEach((p, idx) => {
+          if (idx < level) p.classList.remove('filled');
+        });
+      } else {
+        track.querySelectorAll('.pip').forEach((p, idx) => {
+          p.classList.toggle('filled', idx < level);
+        });
+      }
+    };
+    track.appendChild(pip);
+  }
+
+  const zero = document.createElement('div');
+  zero.className = 'pip-zero';
+  zero.textContent = '0 = offline';
+
+  row.appendChild(label);
+  row.appendChild(track);
+  row.appendChild(zero);
+  grid.appendChild(row);
+});
+</script>
+</body>
+<!-- ===== MOBILE ADAPTATION PATCH ===== -->
+<style>
+  /* ── Mobile layout / accordion ── */
+  @media (max-width: 639px) {
+    body { padding: 1rem 0.75rem; }
+    .sheet { max-width: 100%; }
+
+    .section {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .section-label {
+      cursor: pointer;
+      padding: 12px;
+      margin: 0;
+      position: sticky;
+      top: 0;
+      background: var(--bg-panel);
+      z-index: 2;
+    }
+
+    .section-content {
+      padding: 12px;
+      display: none;
+    }
+
+    .section.open .section-content {
+      display: block;
+    }
+
+    /* stacking */
+    .grid-2, .grid-3, .astral-split {
+      grid-template-columns: 1fr;
+    }
+
+    .sheet-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .dossier-meta { text-align: left; }
+    .field-input { font-size: 16px; padding: 10px; }
+
+    .role-row {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+
+    .license-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .subsystem-row {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+
+    .peace-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .sheet-footer {
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-start;
+    }
+
+    /* horizontal selectors */
+    .class-grid, .hull-grid {
+      display: flex;
+      overflow-x: auto;
+      gap: 6px;
+    }
+
+    .class-btn, .hull-btn {
+      min-width: 90px;
+      flex: 0 0 auto;
+    }
+  }
+
+  /* ── Floating roll button (all sizes) ── */
+  .roll-btn {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #000;
+    font-weight: bold;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 12px rgba(0,0,0,0.4);
+    cursor: pointer;
+    z-index: 999;
+    user-select: none;
+    transition: transform 0.15s;
+  }
+
+  .roll-btn:active {
+    transform: scale(0.9);
+  }
+</style>
+
+<script>
+  (function() {
+    /* ── Auto-wrap sections for accordion ── */
+    document.querySelectorAll('.section').forEach(section => {
+      const label = section.querySelector('.section-label');
+      if (!label) return;
+      // gather everything after the label
+      const content = document.createElement('div');
+      content.className = 'section-content';
+      while (label.nextElementSibling) {
+        content.appendChild(label.nextElementSibling);
+      }
+      section.appendChild(content);
+    });
+
+    /* ── Accordion toggle ── */
+    document.querySelectorAll('.section-label').forEach(label => {
+      label.addEventListener('click', () => {
+        const section = label.closest('.section');
+        if (section) section.classList.toggle('open');
+      });
+    });
+
+    /* ── Save / Load (simple index based) ── */
+    function saveState() {
+      const inputs = document.querySelectorAll('input, textarea, select');
+      const data = {};
+      inputs.forEach((el, i) => {
+        data[i] = el.type === 'checkbox' ? el.checked : el.value;
+      });
+      localStorage.setItem('shipquest_state', JSON.stringify(data));
+    }
+
+    function loadState() {
+      const data = JSON.parse(localStorage.getItem('shipquest_state') || '{}');
+      const inputs = document.querySelectorAll('input, textarea, select');
+      inputs.forEach((el, i) => {
+        if (data[i] !== undefined) {
+          if (el.type === 'checkbox') el.checked = data[i];
+          else el.value = data[i];
+        }
+      });
+    }
+
+    window.addEventListener('input', saveState);
+    window.addEventListener('load', loadState);
+
+    /* ── Simple Potency Roll ── */
+    window.rollDice = function() {
+      const d8 = Math.ceil(Math.random() * 8);
+      const d12 = Math.ceil(Math.random() * 12);
+      alert(`Potency Roll: ${d8} + ${d12} = ${d8 + d12}`);
+    };
+  })();
+</script>
+
+<div class="roll-btn" onclick="rollDice()">ROLL</div>
+<!-- ===== END PATCH ===== -->
+</html>
